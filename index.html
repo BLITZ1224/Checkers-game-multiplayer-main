@@ -18,12 +18,13 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #1a1a2e; /* ပိုရင့်တဲ့အရောင် ပြောင်းထားပါတယ် */
+            background-color: #1a1a2e;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
         }
         #multiplayer-controls {
             background: #16213e;
@@ -44,6 +45,7 @@
             color: #e94560;
             cursor: pointer;
             border: 1px dashed #e94560;
+            user-select: all; /* ID ကို အလွယ်တကူ copy ကူးနိုင်ရန် */
         }
         input {
             padding: 10px;
@@ -76,9 +78,10 @@
         }
         canvas { 
             border: 8px solid #16213e; 
-            margin-top: 30px; 
+            margin: 30px auto; 
             border-radius: 5px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: block; /* Canvas ပေါ်လာအောင် သေချာအောင်လုပ်ခြင်း */
         }
     </style>
 </head>
@@ -95,5 +98,5 @@
         <div id="status">အခြေအနေ: ချိတ်ဆက်မှု စောင့်ဆိုင်းနေပါသည်...</div>
     </div>
 
-    </body>
+</body>
 </html>
