@@ -3,100 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Checkers - BLITZ</title>
+    <title>Multiplayer Checkers - BLITZ Neon</title>
     
-    <script src="libs/p5.min.js"></script>
-    <script src="libs/p5.dom.min.js"></script>
-    <script src="libs/p5.sound.min.js"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
-    <script src="cell.js"></script>
-    <script src="sketch.js"></script>
-    
-    <style type="text/css">
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a2e;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-        #multiplayer-controls {
-            background: #16213e;
-            padding: 20px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            border-bottom: 2px solid #0f3460;
-        }
-        .id-section {
-            font-size: 1.1rem;
-            margin-bottom: 10px;
-        }
-        #my-id {
-            background: #0f3460;
-            padding: 4px 10px;
-            border-radius: 4px;
-            color: #e94560;
-            cursor: pointer;
-            border: 1px dashed #e94560;
-            user-select: all; /* ID ကို အလွယ်တကူ copy ကူးနိုင်ရန် */
-        }
-        input {
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #0f3460;
-            margin: 5px;
-            width: 250px;
-            background: #1a1a2e;
-            color: white;
-        }
-        button {
-            padding: 10px 20px;
-            border-radius: 5px;
-            border: none;
-            background: #e94560;
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-        button:hover { 
-            background: #ff2e63;
-            transform: scale(1.05);
-        }
-        #status { 
-            font-weight: bold; 
-            color: #4ecca3; 
-            margin-top: 10px;
-            font-size: 0.9rem;
-        }
-        canvas { 
-            border: 8px solid #16213e; 
-            margin: 30px auto; 
-            border-radius: 5px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: block; /* Canvas ပေါ်လာအောင် သေချာအောင်လုပ်ခြင်း */
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="multiplayer-controls">
-        <div class="id-section">
-            <span>သင်၏ ID: </span><b id="my-id" title="Copy ID">ထုတ်ပေးနေသည်...</b>
-        </div>
-        <div>
-            <input type="text" id="peer-id-input" placeholder="တစ်ဖက်လူ၏ ID ကို ဤနေရာမှာ ထည့်ပါ">
-            <button id="connect-btn">ချိတ်ဆက်မည်</button>
-        </div>
-        <div id="status">အခြေအနေ: ချိတ်ဆက်မှု စောင့်ဆိုင်းနေပါသည်...</div>
+    <div class="main-wrapper">
+        <div id="canvas-holder"></div>
+
+        <aside class="sidebar">
+            <div class="glass-panel">
+                <h2 class="neon-text">BLITZ CHECKERS</h2>
+                <div class="timer-wrapper">
+                    <div id="timer-bar"></div>
+                    <span id="timer-label">30s</span>
+                </div>
+                <div class="game-stats">
+                    <p>အဖြူ: <span id="white-count">10</span> | အမည်း: <span id="black-count">10</span></p>
+                    <p id="turn-display">အလှည့် စောင့်ဆိုင်းနေသည်...</p>
+                </div>
+            </div>
+
+            <div class="glass-panel chat-container">
+                <div id="chat-messages"></div>
+                <div class="chat-input-row">
+                    <input type="text" id="chat-input" placeholder="စာရိုက်ပါ...">
+                    <button id="send-msg-btn">Send</button>
+                </div>
+            </div>
+
+            <div class="glass-panel connection-panel">
+                <div class="id-display">
+                    ID: <b id="my-id">ထုတ်ပေးနေသည်...</b>
+                </div>
+                <input type="text" id="peer-id-input" placeholder="တစ်ဖက်လူ ID ထည့်ရန်">
+                <button id="connect-btn">Connect Player</button>
+                <div id="status">အခြေအနေ: စောင့်ဆိုင်းနေသည်...</div>
+            </div>
+        </aside>
     </div>
 
+    <script src="cell.js"></script>
+    <script src="sketch.js"></script>
 </body>
 </html>
