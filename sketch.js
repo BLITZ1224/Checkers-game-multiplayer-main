@@ -1,26 +1,23 @@
-var rows = (cols = 10);
-var cellW = 60;
-var grid = [];
-var selected, selectedValue;
-var whites = 10, blacks = 10;
-var turn = 0; 
-var turnValue = -1;
-var gameover = false;
-var winner;
-
-var peer;
-var conn;
-var myIdDisplay, statusDisplay;
+var rows = (cols = 10), cellW = 60, grid = [];
+var selected = null, selectedValue, turn = 0, turnValue = -1;
+var gameover = false, winner, timer = 30, timerInterval;
+var peer, conn;
 
 function setup() {
-  createCanvas(601, 601);
+  let canvas = createCanvas(600, 600);
+  canvas.parent('canvas-holder');
+  
   for (var i = 0; i < rows; i++) {
     for (var j = 0; j < cols; j++) {
       grid.push(new Cell(j, i));
     }
   }
+  initPieces();
+  setupMultiplayer();
+  setupChat();
+}
 
-  // အကွက်များ နေရာချခြင်း
+function initPieces() {
   for (var i = 0; i < cols; i++) {
     if (i % 2 === 1) {
       grid[i + 0 * cols].value = 0;
@@ -32,46 +29,82 @@ function setup() {
       grid[i + 9 * cols].value = 1;
     }
   }
+}
 
-  myIdDisplay = document.getElementById('my-id');
-  statusDisplay = document.getElementById('status');
+function setupMultiplayer() {
   peer = new Peer();
-
-  peer.on('open', function(id) {
-    if (myIdDisplay) myIdDisplay.innerText = id;
+  peer.on('open', id => {
+    document.getElementById('my-id').innerText = id;
   });
 
-  peer.on('connection', function(c) {
+  peer.on('connection', c => {
     conn = c;
-    turnValue = 0;
+    turnValue = 0; // Host is White
     setupConn();
   });
 
-  var connectBtn = document.getElementById('connect-btn');
-  if (connectBtn) {
-    connectBtn.onclick = function() {
-      var remoteId = document.getElementById('peer-id-input').value;
-      conn = peer.connect(remoteId);
-      turnValue = 1;
-      setupConn();
-    };
-  }
+  document.getElementById('connect-btn').onclick = () => {
+    let remoteId = document.getElementById('peer-id-input').value;
+    conn = peer.connect(remoteId);
+    turnValue = 1; // Joiner is Black
+    setupConn();
+  };
 }
 
 function setupConn() {
-  if (statusDisplay) statusDisplay.innerText = "ချိတ်ဆက်မိပါပြီ! သင်က Player " + (turnValue + 1) + " ပါ။";
-  conn.on('data', function(data) {
-    if (data.gridStates) {
-      for (var i = 0; i < grid.length; i++) {
-        grid[i].value = data.gridStates[i].v;
-        grid[i].king = data.gridStates[i].k;
-        grid[i].highlight = false;
-        grid[i].kill = false;
-      }
+  document.getElementById('status').innerText = "ချိတ်ဆက်မိပါပြီ!";
+  startTimer();
+  
+  conn.on('data', data => {
+    if (data.type === 'move') {
+      data.states.forEach((s, i) => {
+        grid[i].value = s.v;
+        grid[i].king = s.k;
+      });
       turn = data.nextTurn;
+      resetHighlights();
+      startTimer();
       checkWin();
+    } else if (data.type === 'chat') {
+      displayChat(data.msg, 'peer');
     }
   });
+}
+
+function setupChat() {
+  let input = document.getElementById('chat-input');
+  let btn = document.getElementById('send-msg-btn');
+  btn.onclick = () => {
+    if (input.value && conn) {
+      conn.send({ type: 'chat', msg: input.value });
+      displayChat(input.value, 'my');
+      input.value = '';
+    }
+  };
+}
+
+function displayChat(msg, type) {
+  let box = document.getElementById('chat-messages');
+  let p = document.createElement('p');
+  p.style.margin = "5px 0";
+  p.style.color = (type === 'my') ? "#00fff2" : "#e94560";
+  p.innerText = (type === 'my' ? "You: " : "Friend: ") + msg;
+  box.appendChild(p);
+  box.scrollTop = box.scrollHeight;
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timer = 30;
+  timerInterval = setInterval(() => {
+    timer--;
+    document.getElementById('timer-bar').style.width = (timer/30 * 100) + "%";
+    document.getElementById('timer-label').innerText = timer + "s";
+    if (timer <= 0) {
+      if (turn === turnValue) completeTurn();
+      clearInterval(timerInterval);
+    }
+  }, 1000);
 }
 
 function mouseClicked() {
@@ -91,29 +124,25 @@ function mouseClicked() {
 
 function selectPiece(i) {
   resetHighlights();
-  grid[i].color = "gray";
   selected = grid[i];
   selectedValue = selected.value;
-  grid[i].checkMoves();
+  selected.checkMoves();
 }
 
 function executeNormalMove(i) {
   grid[i].value = selectedValue;
-  grid[i].king = selected.king; // King status ကို လက်ဆင့်ကမ်းသည်
+  grid[i].king = selected.king;
   checkKingStatus(grid[i]);
-
   selected.value = -1;
   selected.king = false;
-  resetHighlights();
   completeTurn();
 }
 
 function executeKillMove(i) {
-  var s = selected;
-  var t = grid[i];
-  var di = t.i - s.i;
-  var dj = t.j - s.j;
-  var target = grid[index(t.i + di, t.j + dj)];
+  let s = selected;
+  let t = grid[i];
+  let targetIdx = index(t.i + (t.i - s.i), t.j + (t.j - s.j));
+  let target = grid[targetIdx];
 
   if (target && target.value === -1) {
     target.value = selectedValue;
@@ -122,29 +151,30 @@ function executeKillMove(i) {
 
     s.value = -1; s.king = false;
     t.value = -1; t.king = false;
-    resetHighlights();
-    completeTurn();
-  }
-}
 
-function checkKingStatus(cell) {
-  if (cell.value === 0 && cell.j === rows - 1) cell.king = true; // အဖြူ အောက်ဆုံးရောက်ရင်
-  if (cell.value === 1 && cell.j === 0) cell.king = true;    // အမည်း အပေါ်ဆုံးရောက်ရင်
-}
-
-function resetHighlights() {
-  for (var j = 0; j < grid.length; j++) {
-    grid[j].color = grid[j].nativeColor;
-    grid[j].highlight = false;
-    grid[j].kill = false;
+    // ဆင့်စား (Chain Kill) စစ်ဆေးခြင်း
+    if (target.canCaptureMore()) {
+      resetHighlights();
+      selected = target;
+      selected.checkMoves(true); // စားလို့ရတာကိုပဲ ပြန်ပြမည်
+    } else {
+      completeTurn();
+    }
   }
 }
 
 function completeTurn() {
   turn = (turn === 0) ? 1 : 0;
-  var states = grid.map(c => ({ v: c.value, k: c.king }));
-  conn.send({ gridStates: states, nextTurn: turn });
+  resetHighlights();
+  let states = grid.map(c => ({ v: c.value, k: c.king }));
+  conn.send({ type: 'move', states: states, nextTurn: turn });
+  startTimer();
   checkWin();
+}
+
+function checkKingStatus(cell) {
+  if (cell.value === 0 && cell.j === rows - 1) cell.king = true;
+  if (cell.value === 1 && cell.j === 0) cell.king = true;
 }
 
 function checkWin() {
@@ -153,25 +183,33 @@ function checkWin() {
     if (c.value === 0) w++;
     if (c.value === 1) b++;
   }
-  whites = w; blacks = b;
-  if (blacks === 0) { gameover = true; winner = 0; }
-  else if (whites === 0) { gameover = true; winner = 1; }
+  document.getElementById('white-count').innerText = w;
+  document.getElementById('black-count').innerText = b;
+  document.getElementById('turn-display').innerText = (turn === turnValue) ? "သင့်အလှည့်" : "တစ်ဖက်လူအလှည့်";
+
+  if (b === 0) { gameover = true; winner = 0; }
+  else if (w === 0) { gameover = true; winner = 1; }
+}
+
+function resetHighlights() {
+  grid.forEach(c => {
+    c.highlight = false;
+    c.kill = false;
+  });
+  selected = null;
 }
 
 function draw() {
-  background(0);
-  if (!conn || !conn.open) {
-    fill(255); textSize(30); textAlign(CENTER);
-    text("Waiting for connection...", width / 2, height / 2);
-  } else {
-    for (var i = 0; i < grid.length; i++) {
-      grid[i].show();
-      grid[i].hover = grid[i].contains(mouseX, mouseY);
-    }
-    if (gameover) {
-      fill(0, 0, 255, 200); textSize(80); textAlign(CENTER);
-      text(winner === 0 ? "White Won!" : "Black Won!", width / 2, height / 2);
-    }
+  background(26, 26, 46); // Dark background for Neon
+  for (var i = 0; i < grid.length; i++) {
+    grid[i].show();
+    grid[i].hover = grid[i].contains(mouseX, mouseY);
+  }
+  if (gameover) {
+    fill(0, 255, 242, 200);
+    textSize(60);
+    textAlign(CENTER, CENTER);
+    text(winner === 0 ? "WHITE WON!" : "BLACK WON!", width/2, height/2);
   }
 }
 
